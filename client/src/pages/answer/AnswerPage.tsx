@@ -1,29 +1,28 @@
 import {
+  DownCircleOutlined,
   ExclamationCircleTwoTone,
-  UpCircleOutlined,
-  DownCircleOutlined
+  UpCircleOutlined
 } from '@ant-design/icons'
 import { Alert, Button, Card, Col, Modal, Row } from 'antd'
 import moment from 'moment'
-import { useCallback, useContext, useEffect, useState } from 'react'
-import AnswerBlocker from '../../components/AnswerBlocker'
-import AnswerFileBrowser from '../../components/AnswerFileBrowser'
+import { useCallback, useContext, useState } from 'react'
 import ArchiveDownload from '../../components/ArchiveDownload'
 import AsyncPlaceholder from '../../components/AsyncContainer'
-import FileImport from '../../components/FileImport'
 import useMomentReached from '../../hooks/useMomentReached'
 import { useServerNow } from '../../hooks/useServerTimeOffset'
 import {
   Answer,
+  FileType,
   Submission,
+  useGetAnswerFileListQuery,
   useGetAnswerQuery,
-  useImportAnswerSourceMutation,
-  useResetAnswerMutation,
-  useUploadAnswerSourceMutation
+  useResetAnswerMutation
 } from '../../services/codefreak-api'
 import { messageService } from '../../services/message'
 import { displayName } from '../../services/user'
 import { DifferentUserContext } from '../task/TaskPage'
+import FileManager, { FileManagerNode } from '../../components/file-manager'
+import { dirname } from 'path'
 
 type AnswerWithSubmissionDeadline = Pick<Answer, 'id'> & {
   submission: Pick<Submission, 'deadline'>
@@ -116,63 +115,19 @@ const DangerZone: React.FC<DangerZoneProps> = props => {
   )
 }
 
-interface UploadAnswerProps {
-  answer: AnswerWithSubmissionDeadline
-  onUpload?: () => void
-}
-
-const UploadAnswer: React.FC<UploadAnswerProps> = props => {
-  const { id } = props.answer
-  const { deadline } = props.answer.submission
-  const [
-    uploadSource,
-    { loading: uploading, data: uploadSuccess }
-  ] = useUploadAnswerSourceMutation()
-
-  const [
-    importSource,
-    { loading: importing, data: importSucess }
-  ] = useImportAnswerSourceMutation()
-
-  const onUpload = (files: File[]) =>
-    uploadSource({ variables: { files, id } }).then(() => {
-      if (props.onUpload) {
-        props.onUpload()
-      }
-    })
-
-  const onImport = (url: string) => importSource({ variables: { url, id } })
-
-  useEffect(() => {
-    if (uploadSuccess || importSucess) {
-      messageService.success('Source code submitted successfully')
-    }
-  }, [uploadSuccess, importSucess])
-
-  return (
-    <Card title="Upload Source Code" style={{ marginBottom: '16px' }}>
-      <AnswerBlocker deadline={deadline ? moment(deadline) : undefined}>
-        <FileImport
-          uploading={uploading}
-          onUpload={onUpload}
-          onImport={onImport}
-          importing={importing}
-        />
-      </AnswerBlocker>
-    </Card>
-  )
-}
-
 const AnswerPage: React.FC<{ answerId: string }> = props => {
   const result = useGetAnswerQuery({
     variables: { id: props.answerId }
   })
   const differentUser = useContext(DifferentUserContext)
-  const [reloadFiles, setReloadFiles] = useState<() => void>(() => {
+  const { data: files } = useGetAnswerFileListQuery({
+    variables: { id: props.answerId }
+  })
+  const [reloadFiles] = useState<() => void>(() => {
     return () => undefined
   })
 
-  if (result.data === undefined) {
+  if (files === undefined || result.data === undefined) {
     return <AsyncPlaceholder result={result} />
   }
 
@@ -182,9 +137,28 @@ const AnswerPage: React.FC<{ answerId: string }> = props => {
     ? `Files uploaded by ${displayName(differentUser)}`
     : 'Your current submission'
 
-  // if we want to store a function in state we have to wrap it in another callback
-  // otherwise React will execute the function
-  const onFileTreeReady = (reload: () => void) => setReloadFiles(() => reload)
+  interface TFile extends FileManagerNode {
+    size: number
+  }
+
+  const getFiles: (prefix: string) => Promise<TFile[]> = prefix => {
+    const normalizePath = (path: string) => '/' + path.replace(/^\/*|\/$/g, '')
+    const normalizedPrefix = normalizePath(prefix)
+    const f = files.answerFiles
+      .filter(file => {
+        const filePath = normalizePath(file.path)
+        const fileDir = dirname(filePath)
+        return normalizedPrefix === fileDir && normalizedPrefix !== filePath
+      })
+      .map(
+        (file): TFile => ({
+          path: file.path,
+          type: file.type === FileType.Directory ? 'directory' : 'file',
+          size: 0
+        })
+      )
+    return Promise.resolve(f)
+  }
 
   return (
     <>
@@ -197,25 +171,9 @@ const AnswerPage: React.FC<{ answerId: string }> = props => {
           </ArchiveDownload>
         }
       >
-        {differentUser && (
-          <Alert
-            showIcon
-            message="You can add comments inside code by clicking the + symbol next to the line numbers!"
-            style={{ marginBottom: 16 }}
-          />
-        )}
-        <AnswerFileBrowser
-          answerId={answer.id}
-          review={!!differentUser}
-          onReady={onFileTreeReady}
-        />
+        <FileManager getNodes={getFiles} />
       </Card>
-      {!differentUser && (
-        <>
-          <UploadAnswer answer={answer} onUpload={reloadFiles} />
-          <DangerZone answer={answer} onReset={reloadFiles} />
-        </>
-      )}
+      {!differentUser && <DangerZone answer={answer} onReset={reloadFiles} />}
     </>
   )
 }

@@ -1,0 +1,31 @@
+.action-dropdown {
+  opacity: 0;
+  transition-duration: 100ms;
+
+  &.ant-dropdown-open {
+    opacity: 1;
+  }
+}
+
+.ant-table-tbody > {
+  tr.selected-row {
+    & td {
+      background-color: #e1f2fa;
+    }
+    &:hover td {
+      background-color: #ecf5f8;
+    }
+  }
+
+  tr:hover .action-dropdown {
+    opacity: 1;
+  }
+}
+
+.action-dropdown-all {
+  opacity: 0;
+
+  &.available {
+    opacity: 1;
+  }
+}
