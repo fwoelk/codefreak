@@ -85,3 +85,10 @@ query GetTaskDetails($id: ID!, $teacher: Boolean = false) {
     }
   }
 }
+
+query TaskBody($id: ID!) {
+  task(id: $id) {
+    id
+    body
+  }
+}

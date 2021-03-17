@@ -1,7 +1,7 @@
 import {Alert, Empty} from "antd";
 import {InfoCircleTwoTone} from "@ant-design/icons";
 import AsyncPlaceholder from "./AsyncContainer";
-import {useGetTaskDetailsQuery} from "../generated/graphql";
+import {useTaskBodyQuery} from "../generated/graphql";
 import useIdParam from "../hooks/useIdParam";
 import ReactMarkdown from "react-markdown";
 import useHasAuthority from "../hooks/useHasAuthority";
@@ -11,7 +11,7 @@ const TaskInstruction = () => {
 
   const isTeacher = useHasAuthority('ROLE_TEACHER')
 
-  const result = useGetTaskDetailsQuery({
+  const result = useTaskBodyQuery({
     variables: { id: useIdParam() }
   })
 
