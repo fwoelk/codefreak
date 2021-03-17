@@ -7,8 +7,6 @@ import { Alert, Button, Card, Col, Modal, Row } from 'antd'
 import moment from 'moment'
 import { useCallback, useContext, useEffect, useState } from 'react'
 import AnswerBlocker from '../../components/AnswerBlocker'
-import AnswerFileBrowser from '../../components/AnswerFileBrowser'
-import ArchiveDownload from '../../components/ArchiveDownload'
 import AsyncPlaceholder from '../../components/AsyncContainer'
 import FileImport from '../../components/FileImport'
 import useMomentReached from '../../hooks/useMomentReached'
@@ -22,8 +20,8 @@ import {
   useUploadAnswerSourceMutation
 } from '../../services/codefreak-api'
 import { messageService } from '../../services/message'
-import { displayName } from '../../services/user'
 import { DifferentUserContext } from '../task/TaskPage'
+import AnswerPageViewOnly from "./AnswerPageViewOnly";
 
 type AnswerWithSubmissionDeadline = Pick<Answer, 'id'> & {
   submission: Pick<Submission, 'deadline'>
@@ -163,7 +161,7 @@ const UploadAnswer: React.FC<UploadAnswerProps> = props => {
   )
 }
 
-const AnswerPage: React.FC<{ answerId: string }> = props => {
+const AnswerPageEditable: React.FC<{ answerId: string }> = props => {
   const result = useGetAnswerQuery({
     variables: { id: props.answerId }
   })
@@ -178,38 +176,13 @@ const AnswerPage: React.FC<{ answerId: string }> = props => {
 
   const { answer } = result.data
 
-  const filesTitle = differentUser
-    ? `Files uploaded by ${displayName(differentUser)}`
-    : 'Your current submission'
-
   // if we want to store a function in state we have to wrap it in another callback
   // otherwise React will execute the function
   const onFileTreeReady = (reload: () => void) => setReloadFiles(() => reload)
 
   return (
     <>
-      <Card
-        title={filesTitle}
-        style={{ marginBottom: '16px' }}
-        extra={
-          <ArchiveDownload url={answer.sourceUrl}>
-            Download source code
-          </ArchiveDownload>
-        }
-      >
-        {differentUser && (
-          <Alert
-            showIcon
-            message="You can add comments inside code by clicking the + symbol next to the line numbers!"
-            style={{ marginBottom: 16 }}
-          />
-        )}
-        <AnswerFileBrowser
-          answerId={answer.id}
-          review={!!differentUser}
-          onReady={onFileTreeReady}
-        />
-      </Card>
+      <AnswerPageViewOnly answerId={props.answerId} onFilesChange={onFileTreeReady}/>
       {!differentUser && (
         <>
           <UploadAnswer answer={answer} onUpload={reloadFiles} />
@@ -220,4 +193,4 @@ const AnswerPage: React.FC<{ answerId: string }> = props => {
   )
 }
 
-export default AnswerPage
+export default AnswerPageEditable

@@ -49,7 +49,7 @@ import { messageService } from '../../services/message'
 import { unshorten } from '../../services/short-id'
 import { displayName } from '../../services/user'
 import { makeUpdater } from '../../services/util'
-import AnswerPage from '../answer/AnswerPage'
+import AnswerPageEditabel from '../answer/AnswerPageEditabel'
 import EvaluationPage from '../evaluation/EvaluationOverviewPage'
 import NotFoundPage from '../NotFoundPage'
 import TaskDetailsPage from './TaskDetailsPage'
@@ -308,7 +308,7 @@ const TaskPage: React.FC = () => {
           <TaskDetailsPage editable={editable} />
         </Route>
         <Route path={`${path}/answer`}>
-          {answer ? <AnswerPage answerId={answer.id} /> : <NotFoundPage />}
+          {answer ? <AnswerPageEditabel answerId={answer.id} /> : <NotFoundPage />}
         </Route>
         <Route path={`${path}/evaluation`}>
           {answer ? <EvaluationPage answerId={answer.id} /> : <NotFoundPage />}
